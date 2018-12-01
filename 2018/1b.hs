@@ -35,4 +35,5 @@ firstDuplicate (x : xs) seen =
 main = do 
     changesAsStrings <- readLines
     let changesAsIntegers = map parseChange changesAsStrings
-    print $ firstDuplicate (integratedFrequencies changesAsIntegers [] 0) Data.Set.empty
+        runningTotals = integratedFrequencies changesAsIntegers [] 0
+    print $ firstDuplicate runningTotals Data.Set.empty
