@@ -14,11 +14,6 @@ totalDistanceTo points point =
     in sum distances
 
 
-
-
-
-
-
 readLines = do
     done <- isEOF
     if done
