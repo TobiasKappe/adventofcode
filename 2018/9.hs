@@ -33,7 +33,8 @@ simulate marbles players (value : values) =
 
 
 highscore players final =
-    let scores = simulate Data.Sequence.Empty players [0..final]
+    let trueFinal = final - (final `mod` 23)
+        scores = simulate Data.Sequence.Empty players [0..trueFinal]
     in maximum $ M.elems scores
 
 
