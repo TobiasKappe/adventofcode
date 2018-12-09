@@ -3,16 +3,8 @@ import qualified Data.Map.Strict as M
 import Text.Regex.Posix
 
 
-rotateClockwise Data.Sequence.Empty =
-    Data.Sequence.Empty
-
-
 rotateClockwise (marbles :|> marble) =
     marble <| marbles
-
-
-rotateCounterclockwise Data.Sequence.Empty =
-    Data.Sequence.empty
 
 
 rotateCounterclockwise (marble :<| marbles) =
