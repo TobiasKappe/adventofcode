@@ -19,7 +19,9 @@ rotateCounterclockwise (marble :<| marbles) =
     marbles |> marble
 
 
-step value marbles =
+next value Data.Sequence.Empty = (0, Data.Sequence.singleton 0)
+
+next value marbles =
     if value `mod` 23 == 0
     then let tmpMarbles :|> remove = iterate (rotateClockwise) marbles !! 7
              newMarbles = rotateCounterclockwise tmpMarbles
@@ -29,19 +31,17 @@ step value marbles =
          in (0, shifted |> value)
 
 
+simulate marbles players [] = M.empty
 
-simulate players player steps =
-    case steps of
-        0 -> (M.empty, Data.Sequence.singleton 0)
-        n -> let previousPlayer = (player - 1) `mod` players
-                 (scores, marbles) = simulate players previousPlayer (n-1)
-                 (gain, newMarbles) = step n marbles
-                 newScores = M.insertWith (+) player gain scores
-             in (newScores, newMarbles)
+simulate marbles players (value : values) =
+    let (gain, newMarbles) = next value marbles
+        player = value `mod` players
+        scores = simulate newMarbles players values
+    in M.insertWith (+) player gain scores
 
 
-highscore players steps =
-    let (scores, marbles) = simulate players 0 steps
+highscore players final =
+    let scores = simulate Data.Sequence.Empty players [0..final]
     in maximum $ M.elems scores
 
 
