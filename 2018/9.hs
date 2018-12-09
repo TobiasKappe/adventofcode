@@ -1,5 +1,6 @@
 import Data.Sequence
 import qualified Data.Map.Strict as M
+import Text.Regex.Posix
 
 
 rotateClockwise Data.Sequence.Empty =
@@ -44,5 +45,14 @@ highscore players steps =
     in maximum $ M.elems scores
 
 
+parseLine :: String -> (Int, Int)
+
+parseLine line =
+    let pattern = "(.*) players; last marble is worth (.*) points"
+        parts = tail $ head (line =~ pattern) :: [String]
+        [first, next] = parts
+    in (read first, read next)
+
+
 main = do
-    print $ highscore 411 7205900
+    interact (unlines . map (show . (uncurry highscore) . parseLine) . lines)
