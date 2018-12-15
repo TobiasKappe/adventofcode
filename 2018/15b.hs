@@ -94,12 +94,6 @@ preferenceCompare distances pos1 pos2 =
         EQ -> compare pos1 pos2
 
 
-over :: Int -> Field -> Bool
-
-over round field =
-    (length $ L.nub $ map (faction) $ M.elems field) < 2
-
-
 findTarget :: Cavern -> Field -> Unit -> Maybe Position
 
 findTarget cavern field unit =
@@ -191,17 +185,42 @@ simulate n cavern elfPowerup field (position : positions) =
             in (n, field) : simulate n cavern elfPowerup newField newPositions
 
 
+isFaction :: Faction -> Unit -> Bool
+
+isFaction faction (Unit _ theFaction _) = faction == theFaction
+
+
+elfCount :: Field -> Int
+
+elfCount field = M.size $ M.filter (isFaction Elf) field
+
+
+goblinCount :: Field -> Int
+
+goblinCount field = M.size $ M.filter (isFaction Goblin) field
+
+
+elfDown :: Int -> Field -> Bool
+
+elfDown elves field = elfCount field < elves
+
+
+over :: Int -> (Int, Field) -> Bool
+
+over elves (n, field) =
+    elfDown elves field || goblinCount field == 0
+
+
 outcomeIfWinWithoutLosses :: Cavern -> Int -> Field -> Maybe Int
 
 outcomeIfWinWithoutLosses cavern elfPowerup field =
-    let isElf (Unit _ faction _) = faction == Elf
-        elfCount field = M.size $ M.filter (isElf) field
+    let elves = elfCount field
         states = simulate 0 cavern elfPowerup field []
-        Just (finalRound, finalField) = L.find (uncurry over) states
-    in if (elfCount field) == (elfCount finalField)
-       then let totalHp = sum $ map (hp) $ M.elems finalField
+        Just (finalRound, finalField) = L.find (over elves) states
+    in if elfDown elves finalField
+       then Nothing
+       else let totalHp = sum $ map (hp) $ M.elems finalField
             in Just ((finalRound-1) * totalHp)
-       else Nothing
 
 
 search :: Int -> Cavern -> Field -> Int
@@ -325,4 +344,4 @@ render cavern field =
 main = do
     lines <- readLines
     let (cavern, field) = parseLines 0 lines
-    print $ search 0 cavern field
+    print $ search 1 cavern field
