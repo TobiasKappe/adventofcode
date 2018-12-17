@@ -3,6 +3,7 @@ import qualified Data.Set as S
 import qualified Data.List as L
 import qualified Data.Tuple as T
 import qualified Data.List.Extra as E
+import qualified Data.Sequence as Sq
 import System.IO (isEOF)
 
 import GHC.Exts (sortWith)
@@ -42,14 +43,14 @@ adjacent cavern (Position x y) =
                       Position x (y+1), 
                       Position (x-1) y, 
                       Position x (y-1)]
-    in filter ((flip S.notMember) cavern) candidates
+    in L.filter ((flip S.notMember) cavern) candidates
 
 
 neighbourhood :: Cavern -> Field -> Position -> [Position]
 
 neighbourhood cavern field position =
     let adj = adjacent cavern position
-    in filter ((flip M.notMember) field) adj
+    in L.filter ((flip M.notMember) field) adj
 
 
 findEnemies :: Field -> Unit -> [Unit]
@@ -65,22 +66,24 @@ findOpponents cavern field unit =
     let adj = S.fromList $ adjacent cavern (position unit)
         enemies = findEnemies field unit
         inRange u = S.member (position u) adj
-    in filter (inRange) enemies
+    in L.filter (inRange) enemies
 
 
-floodFill :: Cavern -> Field -> Int -> Distances -> Position -> Distances
+floodFill :: Cavern -> Field -> Position -> Distances
 
-floodFill cavern field distance distances current =
-    let updatedDistances = M.insert current distance distances
-        hood = neighbourhood cavern field current
-        folder = floodFill cavern field (distance+1)
-        newDistances = foldl folder updatedDistances hood
-    in case M.lookup current distances of
-        Nothing -> newDistances
-        Just currentDistance ->
-            if currentDistance <= distance
-            then distances
-            else newDistances
+floodFill cavern field start =
+    let initialDistances = M.singleton start 0
+        initialTodo = Sq.singleton start
+    in floodFill' cavern field initialDistances initialTodo
+    where floodFill' cavern field distances Sq.Empty = distances
+          floodFill' cavern field distances (position Sq.:<| todo) =
+              let hood = neighbourhood cavern field position
+                  distance = distances M.! position
+                  unexplored = L.filter ((flip M.notMember) distances) hood
+                  updateDistance m position = M.insert position (distance+1) m
+                  newDistances = foldl (updateDistance) distances unexplored
+                  newTodo = foldl (Sq.|>) todo unexplored
+              in floodFill' cavern field newDistances newTodo
 
 
 preferenceCompare :: Distances -> Position -> Position -> Ordering
@@ -99,8 +102,8 @@ findTarget :: Cavern -> Field -> Unit -> Maybe Position
 findTarget cavern field unit =
     let enemies = findEnemies field unit
         inrange = concat $ map (neighbourhood cavern field . position) enemies
-        distances = floodFill cavern field 0 M.empty (position unit)
-        reachable = filter ((flip M.member) distances) inrange
+        distances = floodFill cavern field (position unit)
+        reachable = L.filter ((flip M.member) distances) inrange
     in case reachable of
         [] -> Nothing
         _ -> Just (L.minimumBy (preferenceCompare distances) reachable)
@@ -123,7 +126,7 @@ simulateMove cavern field unit =
     then case findTarget cavern field unit of
             Nothing -> (unit, field)
             Just target ->
-                let distances = floodFill cavern field 0 M.empty target
+                let distances = floodFill cavern field target
                     hood = neighbourhood cavern field (position unit)
                     valid = L.filter ((flip M.member) distances) hood
                     next = L.minimumBy (preferenceCompare distances) valid
@@ -316,7 +319,7 @@ renderHitpointsOn :: Int -> Field -> IO()
 
 renderHitpointsOn south field =
     let thisline (Unit (Position _ y) _ _) = y == south
-        units = filter (thisline) $ M.elems field
+        units = L.filter (thisline) $ M.elems field
         rendered = map (renderHitpoints) units
     in putStr $ L.intercalate ", " rendered
 
