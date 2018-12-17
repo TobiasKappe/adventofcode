@@ -174,18 +174,21 @@ simulateTurn cavern elfPowerup field positions unit =
     in simulateAttack cavern elfPowerup nextField positions nextUnit
 
 
-simulate :: Int -> Cavern -> Int -> Field -> [Position] -> [(Int, Field)]
+simulate :: Cavern -> Int -> Field -> [(Int, Field)]
 
-simulate n cavern elfPowerup field [] =
-    let positions = M.keys field
-    in simulate (n+1) cavern elfPowerup field positions
-
-simulate n cavern elfPowerup field (position : positions) =
-    case M.lookup position field of
-        Nothing -> simulate n cavern elfPowerup field positions
-        Just unit ->
-            let (newPositions, newField) = simulateTurn cavern elfPowerup field positions unit
-            in (n, field) : simulate n cavern elfPowerup newField newPositions
+simulate cavern elfPowerup field =
+    simulate' cavern elfPowerup field 0 []
+    where simulate' cavern elfPowerup field n [] =
+              let positions = M.keys field
+              in simulate' cavern elfPowerup field (n+1) positions
+          simulate' cavern elfPowerup field n (position : positions) =
+              case M.lookup position field of
+                  Nothing -> simulate' cavern elfPowerup field n positions
+                  Just unit ->
+                      let (newPositions, newField) =
+                              simulateTurn cavern elfPowerup field positions unit
+                          remainder = simulate' cavern elfPowerup newField n newPositions
+                      in (n, field) : remainder
 
 
 isFaction :: Faction -> Unit -> Bool
@@ -218,7 +221,7 @@ outcomeIfWinWithoutLosses :: Cavern -> Int -> Field -> Maybe Int
 
 outcomeIfWinWithoutLosses cavern elfPowerup field =
     let elves = elfCount field
-        states = simulate 0 cavern elfPowerup field []
+        states = simulate cavern elfPowerup field
         Just (finalRound, finalField) = L.find (over elves) states
     in if elfDown elves finalField
        then Nothing
