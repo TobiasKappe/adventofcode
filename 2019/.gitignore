@@ -1,0 +1,4 @@
+*.exe
+*.cs
+!io.cs
+*.mdb
